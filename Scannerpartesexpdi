@@ -1,0 +1,519 @@
+-- Engine: Roblox
+-- Versão: Atual
+-- Linguagem: Lua
+-- Executor: Delta Executor (Mobile/Android)
+
+-- Scanner de Avatar Scaling:
+-- 1. Testa se os NumberValue do Humanoid replicam
+-- 2. Se funcionar, mostra GUI com sliders
+-- 3. Se não funcionar, mostra mensagem de erro
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+
+local guiParent = game:GetService("CoreGui")
+local testGui = Instance.new("ScreenGui")
+testGui.Name = "N1K_Test"
+local success = pcall(function() testGui.Parent = guiParent end)
+if not success or not testGui.Parent then
+    guiParent = player:WaitForChild("PlayerGui")
+end
+testGui:Destroy()
+
+-- Limpa GUIs anteriores
+if guiParent:FindFirstChild("N1K_Scanner") then
+    guiParent:FindFirstChild("N1K_Scanner"):Destroy()
+end
+if guiParent:FindFirstChild("N1K_ScaleUI") then
+    guiParent:FindFirstChild("N1K_ScaleUI"):Destroy()
+end
+if guiParent:FindFirstChild("N1K_FailUI") then
+    guiParent:FindFirstChild("N1K_FailUI"):Destroy()
+end
+
+-- GUI do Scanner
+local scannerGui = Instance.new("ScreenGui")
+scannerGui.Name = "N1K_Scanner"
+scannerGui.ResetOnSpawn = false
+scannerGui.IgnoreGuiInset = true
+scannerGui.DisplayOrder = 999
+scannerGui.Parent = guiParent
+
+local scannerFrame = Instance.new("Frame")
+scannerFrame.Size = UDim2.new(0, 300, 0, 150)
+scannerFrame.Position = UDim2.new(0.5, -150, 0.5, -75)
+scannerFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+scannerFrame.BorderSizePixel = 0
+scannerFrame.Parent = scannerGui
+Instance.new("UICorner", scannerFrame).CornerRadius = UDim.new(0, 8)
+Instance.new("UIStroke", scannerFrame).Color = Color3.fromRGB(60, 60, 80)
+
+local scannerTitle = Instance.new("TextLabel")
+scannerTitle.Size = UDim2.new(1, -20, 0, 30)
+scannerTitle.Position = UDim2.new(0, 10, 0, 10)
+scannerTitle.BackgroundTransparency = 1
+scannerTitle.Text = "N1K Avatar Scanner"
+scannerTitle.TextColor3 = Color3.fromRGB(220, 220, 240)
+scannerTitle.Font = Enum.Font.GothamBold
+scannerTitle.TextSize = 16
+scannerTitle.TextXAlignment = Enum.TextXAlignment.Left
+scannerTitle.Parent = scannerFrame
+
+local scannerStatus = Instance.new("TextLabel")
+scannerStatus.Size = UDim2.new(0.9, 0, 0, 40)
+scannerStatus.Position = UDim2.new(0.05, 0, 0.35, 0)
+scannerStatus.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+scannerStatus.TextColor3 = Color3.fromRGB(150, 200, 255)
+scannerStatus.Text = "Iniciando scan..."
+scannerStatus.Font = Enum.Font.Gotham
+scannerStatus.TextSize = 12
+scannerStatus.TextWrapped = true
+scannerStatus.Parent = scannerFrame
+Instance.new("UICorner", scannerStatus).CornerRadius = UDim.new(0, 6)
+
+local scanBtn = Instance.new("TextButton")
+scanBtn.Size = UDim2.new(0.8, 0, 0, 35)
+scanBtn.Position = UDim2.new(0.1, 0, 0.7, 0)
+scanBtn.BackgroundColor3 = Color3.fromRGB(60, 120, 255)
+scanBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+scanBtn.Text = "Iniciar Scan"
+scanBtn.Font = Enum.Font.GothamSemibold
+scanBtn.TextSize = 14
+scanBtn.BorderSizePixel = 0
+scanBtn.Parent = scannerFrame
+Instance.new("UICorner", scanBtn).CornerRadius = UDim.new(0, 6)
+
+-- GUI de Sucesso (mostra quando o jogo permite scaling)
+local successGui = Instance.new("ScreenGui")
+successGui.Name = "N1K_ScaleUI"
+successGui.ResetOnSpawn = false
+successGui.IgnoreGuiInset = true
+successGui.DisplayOrder = 1000
+successGui.Enabled = false
+successGui.Parent = guiParent
+
+local successFrame = Instance.new("Frame")
+successFrame.Size = UDim2.new(0, 260, 0, 320)
+successFrame.Position = UDim2.new(0.5, -130, 0.5, -160)
+successFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+successFrame.BorderSizePixel = 0
+successFrame.Parent = successGui
+Instance.new("UICorner", successFrame).CornerRadius = UDim.new(0, 8)
+Instance.new("UIStroke", successFrame).Color = Color3.fromRGB(60, 200, 120)
+
+local successTitleBar = Instance.new("Frame")
+successTitleBar.Size = UDim2.new(1, 0, 0, 30)
+successTitleBar.BackgroundColor3 = Color3.fromRGB(40, 55, 40)
+successTitleBar.BorderSizePixel = 0
+successTitleBar.Parent = successFrame
+Instance.new("UICorner", successTitleBar).CornerRadius = UDim.new(0, 8)
+
+local successFix = Instance.new("Frame")
+successFix.Size = UDim2.new(1, 0, 0, 8)
+successFix.Position = UDim2.new(0, 0, 1, -8)
+successFix.BackgroundColor3 = Color3.fromRGB(40, 55, 40)
+successFix.BorderSizePixel = 0
+successFix.Parent = successTitleBar
+
+local successTitle = Instance.new("TextLabel")
+successTitle.Size = UDim2.new(1, -10, 1, 0)
+successTitle.Position = UDim2.new(0, 10, 0, 0)
+successTitle.BackgroundTransparency = 1
+successTitle.Text = "✅ Scaling Funciona!"
+successTitle.TextColor3 = Color3.fromRGB(100, 255, 150)
+successTitle.Font = Enum.Font.GothamBold
+successTitle.TextSize = 14
+successTitle.TextXAlignment = Enum.TextXAlignment.Left
+successTitle.Parent = successTitleBar
+
+local normalBtn = Instance.new("TextButton")
+normalBtn.Size = UDim2.new(0.92, 0, 0, 30)
+normalBtn.Position = UDim2.new(0.04, 0, 0.12, 0)
+normalBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+normalBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+normalBtn.Text = "Normal"
+normalBtn.Font = Enum.Font.GothamSemibold
+normalBtn.TextSize = 13
+normalBtn.BorderSizePixel = 0
+normalBtn.Parent = successFrame
+Instance.new("UICorner", normalBtn).CornerRadius = UDim.new(0, 6)
+
+-- GUI de Falha (mostra quando o jogo não permite)
+local failGui = Instance.new("ScreenGui")
+failGui.Name = "N1K_FailUI"
+failGui.ResetOnSpawn = false
+failGui.IgnoreGuiInset = true
+failGui.DisplayOrder = 1000
+failGui.Enabled = false
+failGui.Parent = guiParent
+
+local failFrame = Instance.new("Frame")
+failFrame.Size = UDim2.new(0, 300, 0, 200)
+failFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
+failFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+failFrame.BorderSizePixel = 0
+failFrame.Parent = failGui
+Instance.new("UICorner", failFrame).CornerRadius = UDim.new(0, 8)
+Instance.new("UIStroke", failFrame).Color = Color3.fromRGB(255, 80, 80)
+
+local failTitleBar = Instance.new("Frame")
+failTitleBar.Size = UDim2.new(1, 0, 0, 30)
+failTitleBar.BackgroundColor3 = Color3.fromRGB(55, 40, 40)
+failTitleBar.BorderSizePixel = 0
+failTitleBar.Parent = failFrame
+Instance.new("UICorner", failTitleBar).CornerRadius = UDim.new(0, 8)
+
+local failFix = Instance.new("Frame")
+failFix.Size = UDim2.new(1, 0, 0, 8)
+failFix.Position = UDim2.new(0, 0, 1, -8)
+failFix.BackgroundColor3 = Color3.fromRGB(55, 40, 40)
+failFix.BorderSizePixel = 0
+failFix.Parent = failTitleBar
+
+local failTitle = Instance.new("TextLabel")
+failTitle.Size = UDim2.new(1, -10, 1, 0)
+failTitle.Position = UDim2.new(0, 10, 0, 0)
+failTitle.BackgroundTransparency = 1
+failTitle.Text = "❌ Scaling Bloqueado"
+failTitle.TextColor3 = Color3.fromRGB(255, 100, 100)
+failTitle.Font = Enum.Font.GothamBold
+failTitle.TextSize = 14
+failTitle.TextXAlignment = Enum.TextXAlignment.Left
+failTitle.Parent = failTitleBar
+
+local failMsg = Instance.new("TextLabel")
+failMsg.Size = UDim2.new(0.9, 0, 0, 100)
+failMsg.Position = UDim2.new(0.05, 0, 0.25, 0)
+failMsg.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+failMsg.TextColor3 = Color3.fromRGB(200, 200, 220)
+failMsg.Text = "Este jogo tem anti-cheat que reseta avatar scaling.\n\nJogos que funcionam:\n• Brookhaven\n• Adopt Me\n• Jailbreak\n• Murder Mystery 2"
+failMsg.Font = Enum.Font.Gotham
+failMsg.TextSize = 11
+failMsg.TextWrapped = true
+failMsg.TextYAlignment = Enum.TextYAlignment.Top
+failMsg.Parent = failFrame
+Instance.new("UICorner", failMsg).CornerRadius = UDim.new(0, 6)
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0.8, 0, 0, 30)
+closeBtn.Position = UDim2.new(0.1, 0, 0.75, 0)
+closeBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 120)
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.Text = "Fechar"
+closeBtn.Font = Enum.Font.GothamSemibold
+closeBtn.TextSize = 13
+closeBtn.BorderSizePixel = 0
+closeBtn.Parent = failFrame
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
+
+-- Draggable pro scanner
+local dragging, dragInput, dragStart, startPos
+scannerFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = scannerFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+scannerFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        scannerFrame.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+-- Draggable pro success
+dragging, dragInput, dragStart, startPos = nil, nil, nil, nil
+successTitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = successFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+successTitleBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        successFrame.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+-- Draggable pro fail
+dragging, dragInput, dragStart, startPos = nil, nil, nil, nil
+failTitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = failFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+failTitleBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        failFrame.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+closeBtn.MouseButton1Click:Connect(function()
+    failGui:Destroy()
+end)
+
+-- Sliders da GUI de sucesso
+local MIN_VAL = 0.5
+local MAX_VAL = 5.0
+
+local function createSlider(name, yPos, color)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(0.92, 0, 0, 36)
+    container.Position = UDim2.new(0.04, 0, yPos, 0)
+    container.BackgroundTransparency = 1
+    container.Parent = successFrame
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 0, 14)
+    label.BackgroundTransparency = 1
+    label.Text = name .. ": 1.0x"
+    label.TextColor3 = Color3.fromRGB(200, 200, 220)
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 11
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = container
+
+    local track = Instance.new("Frame")
+    track.Size = UDim2.new(1, 0, 0, 6)
+    track.Position = UDim2.new(0, 0, 0, 18)
+    track.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    track.BorderSizePixel = 0
+    track.Parent = container
+    Instance.new("UICorner", track).CornerRadius = UDim.new(0, 3)
+
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new(0.111, 0, 1, 0)
+    fill.BackgroundColor3 = color
+    fill.BorderSizePixel = 0
+    fill.Parent = track
+    Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 3)
+
+    local knob = Instance.new("TextButton")
+    knob.Size = UDim2.new(0, 16, 0, 16)
+    knob.Position = UDim2.new(0.111, -8, 0.5, -8)
+    knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    knob.Text = ""
+    knob.BorderSizePixel = 0
+    knob.Parent = track
+    Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+
+    return {container = container, label = label, track = track, fill = fill, knob = knob, value = 1.0, name = name}
+end
+
+local heightSlider = createSlider("Altura", 0.22, Color3.fromRGB(60, 200, 120))
+local widthSlider = createSlider("Largura", 0.35, Color3.fromRGB(255, 170, 0))
+local depthSlider = createSlider("Profundidade", 0.48, Color3.fromRGB(200, 60, 200))
+local headSlider = createSlider("Cabeça", 0.61, Color3.fromRGB(60, 180, 255))
+local armsSlider = createSlider("Braços", 0.74, Color3.fromRGB(255, 100, 150))
+local legsSlider = createSlider("Pernas", 0.87, Color3.fromRGB(150, 255, 100))
+
+local function valToPos(val) return (val - MIN_VAL) / (MAX_VAL - MIN_VAL) end
+local function posToVal(pos) return MIN_VAL + (MAX_VAL - MIN_VAL) * pos end
+
+local function setSlider(slider, val)
+    val = math.clamp(val, MIN_VAL, MAX_VAL)
+    slider.value = val
+    local pos = valToPos(val)
+    slider.fill.Size = UDim2.new(pos, 0, 1, 0)
+    slider.knob.Position = UDim2.new(pos, -8, 0.5, -8)
+    slider.label.Text = slider.name .. ": " .. string.format("%.2f", val) .. "x"
+end
+
+local function setupSliderDrag(slider, onChange)
+    local dragging = false
+    local function updateFromX(xPos)
+        local trackAbsPos = slider.track.AbsolutePosition.X
+        local trackAbsSize = slider.track.AbsoluteSize.X
+        if trackAbsSize <= 0 then return end
+        local relX = math.clamp((xPos - trackAbsPos) / trackAbsSize, 0, 1)
+        setSlider(slider, posToVal(relX))
+        onChange()
+    end
+    local function startDrag(input)
+        dragging = true
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+    slider.knob.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            startDrag(input)
+        end
+    end)
+    slider.track.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            startDrag(input)
+            updateFromX(input.Position.X)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            updateFromX(input.Position.X)
+        end
+    end)
+end
+
+-- Lógica de scaling
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+
+local function getScale(name)
+    local s = humanoid:FindFirstChild(name)
+    if not s then
+        s = Instance.new("NumberValue")
+        s.Name = name
+        s.Value = 1
+        s.Parent = humanoid
+    end
+    return s
+end
+
+local heightScale = getScale("BodyHeightScale")
+local widthScale = getScale("BodyWidthScale")
+local depthScale = getScale("BodyDepthScale")
+local headScale = getScale("HeadScale")
+
+local originals = {
+    height = heightScale.Value,
+    width = widthScale.Value,
+    depth = depthScale.Value,
+    head = headScale.Value
+}
+
+local function applyScale()
+    pcall(function()
+        heightScale.Value = heightSlider.value
+        widthScale.Value = widthSlider.value
+        depthScale.Value = depthSlider.value
+        headScale.Value = headSlider.value
+    end)
+end
+
+local function applyNormal()
+    pcall(function()
+        heightScale.Value = originals.height
+        widthScale.Value = originals.width
+        depthScale.Value = originals.depth
+        headScale.Value = originals.head
+    end)
+    
+    setSlider(heightSlider, 1.0)
+    setSlider(widthSlider, 1.0)
+    setSlider(depthSlider, 1.0)
+    setSlider(headSlider, 1.0)
+end
+
+normalBtn.MouseButton1Click:Connect(applyNormal)
+
+setupSliderDrag(heightSlider, applyScale)
+setupSliderDrag(widthSlider, applyScale)
+setupSliderDrag(depthSlider, applyScale)
+setupSliderDrag(headSlider, applyScale)
+setupSliderDrag(armsSlider, applyScale)
+setupSliderDrag(legsSlider, applyScale)
+
+player.CharacterAdded:Connect(function(newChar)
+    character = newChar
+    humanoid = newChar:WaitForChild("Humanoid")
+    
+    heightScale = getScale("BodyHeightScale")
+    widthScale = getScale("BodyWidthScale")
+    depthScale = getScale("BodyDepthScale")
+    headScale = getScale("HeadScale")
+    
+    originals.height = heightScale.Value
+    originals.width = widthScale.Value
+    originals.depth = depthScale.Value
+    originals.head = headScale.Value
+    
+    task.wait(0.5)
+    applyScale()
+end)
+
+-- Scanner
+scanBtn.MouseButton1Click:Connect(function()
+    scanBtn.Visible = false
+    scannerStatus.Text = "Testando NumberValue do Humanoid..."
+    scannerStatus.TextColor3 = Color3.fromRGB(255, 200, 100)
+    
+    task.wait(0.5)
+    
+    -- Testa mudar os valores
+    local testVal = 2.5
+    heightScale.Value = testVal
+    widthScale.Value = testVal
+    depthScale.Value = testVal
+    headScale.Value = testVal
+    
+    scannerStatus.Text = "Aguardando 3 segundos..."
+    task.wait(3)
+    
+    -- Verifica se os valores foram resetados
+    if heightScale.Value == testVal then
+        -- SUCESSO
+        scannerStatus.Text = "✅ Scaling permitido!"
+        scannerStatus.TextColor3 = Color3.fromRGB(100, 255, 150)
+        
+        task.wait(1)
+        scannerGui:Destroy()
+        successGui.Enabled = true
+        
+        -- Reseta pra 1x
+        applyNormal()
+    else
+        -- FALHA
+        scannerStatus.Text = "❌ Scaling bloqueado!"
+        scannerStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
+        
+        task.wait(1)
+        scannerGui:Destroy()
+        failGui.Enabled = true
+        
+        -- Reseta os valores
+        heightScale.Value = originals.height
+        widthScale.Value = originals.width
+        depthScale.Value = originals.depth
+        headScale.Value = originals.head
+    end
+end)
